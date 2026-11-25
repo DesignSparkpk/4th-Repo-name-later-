@@ -81,7 +81,7 @@
     <p>Straight from our kitchen to your table, still sizzling. Tap <b>Add</b> and send your order to our WhatsApp.</p>
   </div>
   <div class="sig-grid">
-    <article class="feature">
+    <article class="feature" data-item="twin-steaks">
       <div class="media">
         <video src="video/steak.mp4" poster="img/steakcover.webp" muted loop playsinline preload="none" data-autoplay></video>
         <span class="badge">Bestseller</span>
@@ -90,7 +90,7 @@
         <p class="tags"><span>2 steaks</span><span>Cheese sauce</span><span>Garlic mayo</span><span>Fries</span><span>Sautéed beans</span></p>
         <h3>Twin Steaks</h3>
         <p>A perfect duo for true food lovers: two juicy chicken steaks, crispy outside and tender inside, on a sizzling iron plate.</p>
-        <div class="buy"><b class="price" data-price-of="twin-steaks"></b><button class="add" type="button" data-add="twin-steaks">Add <span>+</span></button></div>
+        <div class="buy"><b class="price" data-price-of="twin-steaks"></b><span class="ctl" data-ctl="twin-steaks"></span></div>
       </div>
     </article>
     <div class="sig-cards" data-sig></div>
@@ -218,14 +218,25 @@
     <header><h2 id="cart-h">Your order</h2><button type="button" class="x" data-close-cart aria-label="Close">×</button></header>
     <div class="lines" data-lines></div>
     <div class="empty" data-empty><img src="img/logo.webp" alt="" width="72" height="72"><p>Your order is empty.<br>Add something tasty from the menu.</p></div>
-    <form class="checkout" data-checkout>
-      <div class="mode" role="radiogroup" aria-label="Order type">
+    <form class="checkout" data-checkout novalidate>
+      <p class="lbl">Order type</p>
+      <div class="seg" role="radiogroup" aria-label="Order type">
         <label><input type="radio" name="mode" value="Dine-in" checked><span>Dine-in</span></label>
         <label><input type="radio" name="mode" value="Takeaway"><span>Takeaway</span></label>
         <label><input type="radio" name="mode" value="Delivery"><span>Delivery</span></label>
       </div>
-      <input name="name" placeholder="Your name" autocomplete="name">
-      <input name="addr" placeholder="Address / table no. / pickup time" autocomplete="street-address">
+      <p class="lbl">Your details</p>
+      <input name="name" placeholder="Your name *" autocomplete="name">
+      <input name="phone" type="tel" inputmode="tel" placeholder="Mobile number * (03XX-XXXXXXX)" autocomplete="tel">
+      <input name="addr" placeholder="Table no. / arrival time (optional)" autocomplete="street-address">
+      <input name="note" placeholder="Note for the kitchen (optional)">
+      <p class="lbl">Payment</p>
+      <div class="seg pay" role="radiogroup" aria-label="Payment method">
+        <label><input type="radio" name="pay" value="Cash" checked><span>Cash</span></label>
+        <label><input type="radio" name="pay" value="EasyPaisa"><span class="ep">EasyPaisa</span></label>
+        <label><input type="radio" name="pay" value="JazzCash"><span class="jc">JazzCash</span></label>
+      </div>
+      <p class="paybox" data-paybox hidden></p>
       <div class="total"><span>Total</span><b data-total>Rs 0</b></div>
       <button class="btn wa block" type="submit">Send order on WhatsApp</button>
     </form>

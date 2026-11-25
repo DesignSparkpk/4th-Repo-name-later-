@@ -196,11 +196,11 @@ figcaption{position:absolute;left:12px;bottom:12px;background:rgba(11,38,23,.8);
 /* drawer */
 .drawer{position:fixed;inset:0;z-index:60}
 .scrim{position:absolute;inset:0;background:rgba(5,18,10,.55);animation:fade .25s}
-.panel{position:absolute;right:0;top:0;bottom:0;width:min(440px,100%);background:var(--paper);display:flex;flex-direction:column;animation:slide .3s cubic-bezier(.2,.8,.2,1)}
-.panel>header{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--line)}
+.panel{position:absolute;right:0;top:0;bottom:0;width:min(440px,100%);background:var(--paper);display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;animation:slide .3s cubic-bezier(.2,.8,.2,1)}
+.panel>header{position:sticky;top:0;z-index:2;background:var(--paper);display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--line)}
 .panel h2{font-size:28px;color:var(--g8)}
 .x{border:0;background:var(--cream);width:40px;height:40px;border-radius:50%;font-size:26px;cursor:pointer;line-height:1}
-.lines{flex:1;overflow:auto;padding:8px 22px}
+.lines{flex:none;padding:8px 22px}
 .line{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px dashed var(--line)}
 .line .n{flex:1;font-weight:700}
 .line .n small{display:block;color:var(--mute);font-weight:500}
@@ -208,13 +208,29 @@ figcaption{position:absolute;left:12px;bottom:12px;background:rgba(11,38,23,.8);
 .qty button{width:30px;height:30px;border-radius:50%;border:0;background:#fff;font:800 17px var(--body);cursor:pointer;color:var(--g7)}
 .empty{flex:1;display:grid;place-content:center;justify-items:center;text-align:center;color:var(--mute);gap:10px}
 .empty img{border-radius:50%;opacity:.9}
-.checkout{padding:18px 22px 24px;border-top:1px solid var(--line);display:grid;gap:10px;background:#fff}
+.checkout{margin-top:auto;padding:18px 22px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:grid;gap:10px;background:#fff}
 .checkout input:not([type=radio]){font:500 15px var(--body);padding:13px 15px;border-radius:14px;border:1px solid var(--line);background:var(--cream)}
-.mode{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.mode input{position:absolute;opacity:0}
-.mode span{display:block;text-align:center;padding:10px;border-radius:12px;border:1px solid var(--line);font-weight:700;font-size:14px;cursor:pointer}
-.mode input:checked+span{background:var(--g7);border-color:var(--g7);color:#fff}
-.mode input:focus-visible+span{outline:2px solid var(--gold)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;padding:10px 4px;border-radius:12px;border:1px solid var(--line);font-weight:700;font-size:14px;cursor:pointer;background:#fff}
+.seg input:checked+span{background:var(--g7);border-color:var(--g7);color:#fff}
+.seg input:focus-visible+span{outline:2px solid var(--gold)}
+.pay .ep{color:#0d8f3f}.pay .jc{color:#c8102e}
+.pay input:checked+.ep{background:#0d8f3f;border-color:#0d8f3f;color:#fff}
+.pay input:checked+.jc{background:#c8102e;border-color:#c8102e;color:#fff}
+.lbl{margin:6px 0 -2px;font:700 11.5px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--g6)}
+.paybox{margin:0;padding:12px 14px;border-radius:14px;background:#fff8e1;border:1px dashed var(--gold);font-size:14px;line-height:1.5}
+.paybox strong{font-size:16px;color:var(--g8)}
+[data-item]{cursor:pointer}
+.item:active,.card:active{transform:scale(.985)}
+.ctl{display:inline-flex}
+.step{display:inline-flex;align-items:center;gap:4px;background:var(--g7);color:#fff;border-radius:99px;padding:4px;box-shadow:0 6px 16px -8px rgba(21,74,45,.8)}
+.step b,.item .r .step b{min-width:24px;text-align:center;font:800 16px var(--body);color:inherit}
+.step button{width:32px;height:32px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font:800 18px/1 var(--body);cursor:pointer}
+.step button:active{background:var(--gold);color:var(--g9)}
+.feature .step{background:var(--gold);color:var(--g9)}
+.feature .step button{background:rgba(11,38,23,.12);color:var(--g9)}
 .total{display:flex;justify-content:space-between;align-items:center;font-weight:700;padding:4px 2px}
 .total b{font:900 26px var(--head);color:var(--g7)}
 @keyframes fade{from{opacity:0}}

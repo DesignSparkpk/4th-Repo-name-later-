@@ -2,6 +2,12 @@
    PRICES ARE PLACEHOLDERS — confirm with the restaurant and edit the numbers below. */
 const WA = "923278499197";
 
+/* EasyPaisa / JazzCash accounts — CONFIRM with the restaurant before going live. */
+const PAY = {
+  EasyPaisa: { number: "0327-8499197", title: "Zilla Bite" },
+  JazzCash: { number: "0327-8499197", title: "Zilla Bite" },
+};
+
 const TABS = [
   ["sizzlers", "Steaks & Sizzlers"],
   ["chinese", "Chinese"],
@@ -44,13 +50,27 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+let cart = {};
+try { cart = JSON.parse(localStorage.getItem("zilla-cart")) || {}; } catch { cart = {}; }
+for (const id in cart) if (!byId[id]) delete cart[id];
+
+/* Add button, or − qty + once the item is in the order */
+function ctlInner(id) {
+  const n = cart[id] || 0;
+  const name = esc(byId[id].name);
+  return n
+    ? `<span class="step"><button type="button" data-dec="${id}" aria-label="Remove one ${name}">−</button><b>${n}</b><button type="button" data-inc="${id}" aria-label="Add one more ${name}">+</button></span>`
+    : `<button class="add" type="button" data-add="${id}">Add <span>+</span></button>`;
+}
+const ctl = (id) => `<span class="ctl" data-ctl="${id}">${ctlInner(id)}</span>`;
+
 /* ---------- signature cards & prices ---------- */
 $$("[data-price-of]").forEach((el) => (el.textContent = rs(byId[el.dataset.priceOf].price)));
 $("[data-sig]").innerHTML = MENU.filter((m) => m.sig)
-  .map((m) => `<article class="card reveal">
+  .map((m) => `<article class="card reveal" data-item="${m.id}">
     <div class="ph"><img src="${m.img}" alt="${esc(m.name)}" loading="lazy"><span class="badge">${esc(m.sig)}</span></div>
     <div class="cb"><h3>${esc(m.name)}</h3><p>${esc(m.desc)}</p>
-    <div class="buy"><b class="price">${rs(m.price)}</b><button class="add" type="button" data-add="${m.id}">Add <span>+</span></button></div></div>
+    <div class="buy"><b class="price">${rs(m.price)}</b>${ctl(m.id)}</div></div>
   </article>`)
   .join("");
 
@@ -65,10 +85,10 @@ function renderMenu() {
     ? MENU.filter((m) => (m.name + " " + m.desc).toLowerCase().includes(q))
     : MENU.filter((m) => m.cat === tab);
   $("[data-menu]").innerHTML = list.length
-    ? list.map((m) => `<div class="item">
+    ? list.map((m) => `<div class="item" data-item="${m.id}">
         ${m.img ? `<img src="${m.img}" alt="" loading="lazy">` : `<div class="ic" aria-hidden="true">${m.icon}</div>`}
         <div class="t"><h3>${esc(m.name)}${m.tag ? `<small>${esc(m.tag)}</small>` : ""}</h3>${m.desc ? `<p>${esc(m.desc)}</p>` : ""}</div>
-        <div class="r"><b>${rs(m.price)}</b><button class="add" type="button" data-add="${m.id}">Add <span>+</span></button></div>
+        <div class="r"><b>${rs(m.price)}</b>${ctl(m.id)}</div>
       </div>`).join("")
     : `<p class="nores">Nothing found for “${esc(q)}”. Ask us on WhatsApp, we might still make it!</p>`;
 }
@@ -92,10 +112,6 @@ $$("[data-tab-link]").forEach((a) => a.addEventListener("click", () => setTab(a.
 renderMenu();
 
 /* ---------- cart ---------- */
-let cart = {};
-try { cart = JSON.parse(localStorage.getItem("zilla-cart")) || {}; } catch { cart = {}; }
-for (const id in cart) if (!byId[id]) delete cart[id];
-
 const drawer = $("[data-drawer]");
 const toastEl = $("[data-toast]");
 let toastT;
@@ -120,36 +136,63 @@ function renderCart() {
       <div class="qty"><button type="button" data-dec="${id}" aria-label="Remove one ${esc(m.name)}">−</button><b>${cart[id]}</b><button type="button" data-inc="${id}" aria-label="Add one ${esc(m.name)}">+</button></div></div>`;
   }).join("");
   $("[data-total]").textContent = rs(total());
+  if (typeof syncForm === "function") syncForm();
+  $$("[data-ctl]").forEach((c) => (c.innerHTML = ctlInner(c.dataset.ctl)));
 }
 document.addEventListener("click", (e) => {
   const add = e.target.closest("[data-add]");
-  if (add) { const id = add.dataset.add; cart[id] = (cart[id] || 0) + 1; save(); renderCart(); toast(`${byId[id].name} added ✓`); return; }
+  if (add) { addOne(add.dataset.add); return; }
   const inc = e.target.closest("[data-inc]");
   if (inc) { cart[inc.dataset.inc]++; save(); renderCart(); return; }
   const dec = e.target.closest("[data-dec]");
   if (dec) { const id = dec.dataset.dec; if (--cart[id] <= 0) delete cart[id]; save(); renderCart(); return; }
   if (e.target.closest("[data-open-cart]")) { drawer.hidden = false; document.body.style.overflow = "hidden"; $(".x", drawer).focus(); return; }
-  if (e.target.closest("[data-close-cart]")) closeCart();
+  if (e.target.closest("[data-close-cart]")) { closeCart(); return; }
+  const item = e.target.closest("[data-item]");
+  if (item && !e.target.closest("button, a, input, .ctl")) addOne(item.dataset.item);
 });
+function addOne(id) { cart[id] = (cart[id] || 0) + 1; save(); renderCart(); toast(`${byId[id].name} added ✓`); }
 function closeCart() { drawer.hidden = true; document.body.style.overflow = ""; }
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !drawer.hidden) closeCart(); });
 
-$("[data-checkout]").addEventListener("submit", (e) => {
+const form = $("[data-checkout]");
+function syncForm() {
+  const mode = form.mode.value, pay = form.pay.value;
+  form.addr.required = mode === "Delivery";
+  form.addr.placeholder = mode === "Delivery" ? "Delivery address *" : mode === "Dine-in" ? "Table no. / arrival time (optional)" : "Pickup time (optional)";
+  const box = $("[data-paybox]");
+  box.hidden = !PAY[pay];
+  if (PAY[pay]) box.innerHTML = `<b>${pay}</b> account: <strong>${PAY[pay].number}</strong> (${esc(PAY[pay].title)})<br>Send <b>${rs(total())}</b>, then share the payment screenshot in the WhatsApp chat.`;
+}
+form.addEventListener("change", syncForm);
+form.addEventListener("submit", (e) => {
   e.preventDefault();
-  const f = new FormData(e.target);
+  const f = new FormData(form);
+  const name = f.get("name").trim(), phone = f.get("phone").trim(), addr = f.get("addr").trim(), note = f.get("note").trim();
+  const mode = f.get("mode"), pay = f.get("pay");
+  const bad = (el, msg) => { el.setCustomValidity(msg); el.reportValidity(); el.focus(); setTimeout(() => el.setCustomValidity(""), 0); };
+  if (!name) return bad(form.name, "Please enter your name");
+  if (!/^(\+?92|0)3\d{9}$/.test(phone.replace(/[\s-]/g, ""))) return bad(form.phone, "Enter a valid mobile number, e.g. 0300-1234567");
+  if (mode === "Delivery" && !addr) return bad(form.addr, "Please enter your delivery address");
   const lines = Object.entries(cart).map(([id, n]) => `• ${n} × ${byId[id].name} = ${rs(byId[id].price * n)}`);
   const msg = [
     "Assalam o Alaikum Zilla Bite! 💚",
-    `New ${f.get("mode")} order:`,
+    `New *${mode}* order:`,
     "",
     ...lines,
     "",
-    `Total: ${rs(total())}`,
-    f.get("name") ? `Name: ${f.get("name")}` : "",
-    f.get("addr") ? `${f.get("mode") === "Delivery" ? "Address" : "Details"}: ${f.get("addr")}` : "",
+    `*Total: ${rs(total())}*`,
+    `Payment: ${pay}${PAY[pay] ? " (I will send the screenshot here)" : ""}`,
+    "",
+    `Name: ${name}`,
+    `Phone: ${phone}`,
+    addr ? `${mode === "Delivery" ? "Address" : "Details"}: ${addr}` : "",
+    note ? `Note: ${note}` : "",
   ].filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
+  try { localStorage.setItem("zilla-customer", JSON.stringify({ name, phone, addr })); } catch {}
   window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
 });
+try { const c = JSON.parse(localStorage.getItem("zilla-customer")) || {}; for (const k of ["name", "phone", "addr"]) if (c[k]) form[k].value = c[k]; } catch {}
 renderCart();
 
 /* ---------- header, reveal, lazy video ---------- */
