@@ -48,6 +48,11 @@ const byId = Object.fromEntries(MENU.map((m) => [m.id, m]));
 const rs = (n) => "Rs " + n.toLocaleString("en-PK");
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+/* iPhone Safari only turns a tap on a plain card into a click if the card has its own click
+   listener. The real work happens in the document listener below; this just makes the tap count. */
+const tapReady = () => $$("[data-item]").forEach((el) => {
+  if (!el.dataset.tapReady) { el.addEventListener("click", () => {}); el.dataset.tapReady = "1"; }
+});
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 let cart = {};
@@ -73,6 +78,7 @@ $("[data-sig]").innerHTML = MENU.filter((m) => m.sig)
     <div class="buy"><b class="price">${rs(m.price)}</b>${ctl(m.id)}</div></div>
   </article>`)
   .join("");
+tapReady();
 
 /* ---------- menu ---------- */
 let tab = TABS[0][0];
@@ -91,6 +97,7 @@ function renderMenu() {
         <div class="r"><b>${rs(m.price)}</b>${ctl(m.id)}</div>
       </div>`).join("")
     : `<p class="nores">Nothing found for “${esc(q)}”. Ask us on WhatsApp, we might still make it!</p>`;
+  tapReady();
 }
 function setTab(k) {
   tab = k;
@@ -121,7 +128,7 @@ function toast(msg) {
   clearTimeout(toastT);
   toastT = setTimeout(() => toastEl.classList.remove("on"), 1800);
 }
-function save() { localStorage.setItem("zilla-cart", JSON.stringify(cart)); }
+function save() { try { localStorage.setItem("zilla-cart", JSON.stringify(cart)); } catch (err) { /* storage blocked: cart lives in memory */ } }
 function total() { return Object.entries(cart).reduce((s, [id, n]) => s + byId[id].price * n, 0); }
 function renderCart() {
   const n = Object.values(cart).reduce((a, b) => a + b, 0);
@@ -165,12 +172,20 @@ function syncForm() {
   if (PAY[pay]) box.innerHTML = `<b>${pay}</b> account: <strong>${PAY[pay].number}</strong> (${esc(PAY[pay].title)})<br>Send <b>${rs(total())}</b>, then share the payment screenshot in the WhatsApp chat.`;
 }
 form.addEventListener("change", syncForm);
+form.addEventListener("input", (e) => { e.target.classList.remove("bad"); $("[data-form-err]").hidden = true; });
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   const f = new FormData(form);
   const name = f.get("name").trim(), phone = f.get("phone").trim(), addr = f.get("addr").trim(), note = f.get("note").trim();
   const mode = f.get("mode"), pay = f.get("pay");
-  const bad = (el, msg) => { el.setCustomValidity(msg); el.reportValidity(); el.focus(); setTimeout(() => el.setCustomValidity(""), 0); };
+  const errEl = $("[data-form-err]");
+  const bad = (el, msg) => {
+    errEl.textContent = msg; errEl.hidden = false;
+    el.after(errEl);                                   // show the message right under the field to fix
+    $$(".bad", form).forEach((x) => x.classList.remove("bad")); el.classList.add("bad");
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.focus({ preventScroll: true });
+  };
   if (!name) return bad(form.name, "Please enter your name");
   if (!/^(\+?92|0)3\d{9}$/.test(phone.replace(/[\s-]/g, ""))) return bad(form.phone, "Enter a valid mobile number, e.g. 0300-1234567");
   if (mode === "Delivery" && !addr) return bad(form.addr, "Please enter your delivery address");
@@ -190,7 +205,10 @@ form.addEventListener("submit", (e) => {
     note ? `Note: ${note}` : "",
   ].filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
   try { localStorage.setItem("zilla-customer", JSON.stringify({ name, phone, addr })); } catch {}
-  window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+  $("[data-form-err]").hidden = true;
+  const url = `https://wa.me/${WA}?text=${encodeURIComponent(msg)}`;
+  const w = window.open(url, "_blank");
+  if (w) { try { w.opener = null; } catch (err) { /* ignore */ } } else { location.href = url; }
 });
 try { const c = JSON.parse(localStorage.getItem("zilla-customer")) || {}; for (const k of ["name", "phone", "addr"]) if (c[k]) form[k].value = c[k]; } catch {}
 renderCart();
